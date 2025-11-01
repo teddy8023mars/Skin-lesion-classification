@@ -1,6 +1,6 @@
 # Deep Learning-Based Skin Lesion Segmentation and Classification
 
-![Skin Lesions](https://isic-challenge-data.s3.amazonaws.com/media/DermoscopyImageAnalysisPPT_3.png)
+![Skin Lesions](https://static.wixstatic.com/media/895ce7_48775c7061f24f7fa9f314fc64ffd07a~mv2.png/v1/crop/x_0,y_0,w_713,h_378/fill/w_245,h_130,fp_0.50_0.50,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/milk10k.png)
 
 ## Project Overview
 
