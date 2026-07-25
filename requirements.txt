@@ -1,0 +1,30 @@
+# ISIC 2018 skin-lesion notebooks (Task 1 U-Net segmentation, Task 3 classification).
+# Developed on Google Colab circa mid-2021; a GPU runtime is expected.
+# Version set targets that era (Python 3.7-3.9). Note: the `google.colab` imports
+# (drive mount, files.upload, cv2_imshow) only exist inside Colab and are not pip deps.
+
+# --- Core deep learning ---
+tensorflow==2.5.0        # pulls in Keras (keras-nightly~=2.5.0) -- do NOT pip install `keras` separately,
+                         # the notebooks' bare `keras.*` imports resolve through this bundle
+h5py==3.1.0              # models are saved/loaded as .h5 (TF 2.5 pins h5py~=3.1.0)
+protobuf==3.17.3         # TF 2.5 crashes at import with protobuf>=3.20; keep this pin
+
+# --- Vision / image processing ---
+opencv-python==4.5.3.56  # cv2: resize, blackhat morphology + inpaint (hair removal), imwrite
+Pillow==8.2.0            # PIL.Image open/resize
+scikit-image==0.18.1     # skimage.io
+
+# --- Data handling ---
+numpy==1.19.5            # TF 2.5 requires numpy~=1.19.2
+pandas==1.1.5            # notebooks use DataFrame.append (removed in pandas 2.0)
+scipy==1.5.4             # scipy.stats
+
+# --- Plotting ---
+matplotlib==3.2.2
+seaborn==0.11.1          # confusion-matrix heatmap
+
+# --- Metrics / ML utilities ---
+scikit-learn==0.24.2     # train_test_split, resample, accuracy/F1/Jaccard/recall/precision scores
+
+# --- Progress bars ---
+tqdm==4.61.1

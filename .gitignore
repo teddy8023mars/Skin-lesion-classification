@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+venv/
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
+
+# Trained model weights
+*.h5
+*.keras
+
+# ISIC 2018 dataset (not redistributed -- see data/README.md)
+data/Dataset/
+Dataset/
+ISIC2018/
+
+# Cached numpy arrays of preprocessed images
+*.npy
+image_cache/
+
+# TensorBoard logs
+logs/

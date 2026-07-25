@@ -1,240 +1,134 @@
-# Deep Learning-Based Skin Lesion Segmentation and Classification
+# Skin Lesion Analysis — ISIC 2018
 
-![Skin Lesions](https://static.wixstatic.com/media/895ce7_48775c7061f24f7fa9f314fc64ffd07a~mv2.png/v1/crop/x_0,y_0,w_713,h_378/fill/w_245,h_130,fp_0.50_0.50,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/milk10k.png)
+![Python](https://img.shields.io/badge/Python-3.7%E2%80%933.9-3776AB?logo=python&logoColor=white) ![TensorFlow](https://img.shields.io/badge/TensorFlow-2.5-FF6F00?logo=tensorflow&logoColor=white) ![Jupyter](https://img.shields.io/badge/Jupyter-notebooks-F37626?logo=jupyter&logoColor=white) ![License](https://img.shields.io/badge/License-MIT-green.svg)
 
-## Project Overview
+Deep learning on dermoscopy images for the [ISIC 2018 "Skin Lesion Analysis Towards Melanoma Detection"](https://challenge.isic-archive.com/landing/2018/) challenge, covering all three official tasks: lesion **boundary segmentation**, **attribute detection**, and **disease classification**.
 
-This research project aims to develop deep learning models for automated skin lesion analysis, focusing on two core tasks:
-1. **Skin Lesion Segmentation**: Using the U-Net architecture to accurately segment skin lesion regions
-2. **Skin Lesion Classification**: Using the EfficientNet architecture for multi-class classification of skin lesions
+> **This was my first deep learning project** (2021–2022). I've kept it as it was built — including the parts that didn't work — and added an honest write-up of what I'd do differently now. See [What I'd do differently](#what-id-do-differently).
 
-Skin cancer is one of the most common cancer types worldwide, and early accurate diagnosis is crucial for improving patient survival rates. This project leverages computer vision and deep learning technologies to provide solutions for automated skin lesion analysis, with the potential to assist dermatologists in making more accurate and efficient diagnoses.
+## Results
 
-## Directory Structure
+Measured numbers, taken from the notebooks' own saved outputs:
 
-```
-Skin-lesion-classification/
-│
-├── skin lesion task-1.ipynb  # Skin lesion segmentation task
-├── skin lesion task-3.ipynb  # Skin lesion classification task
-└── README.md                 # Project documentation
-```
+| ISIC task | Notebook | Model | Metric | Score |
+|---|---|---|---|---|
+| **Task 1** — lesion segmentation | [`task1`](task1-lesion-segmentation.ipynb)<br>[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/teddy8023mars/Skin-lesion-classification/blob/main/task1-lesion-segmentation.ipynb) | ResNet50-U-Net | Jaccard / Dice / Accuracy | **0.793** / 0.873 / 0.933 |
+| **Task 2** — attribute detection | [`task2`](task2-attribute-detection.ipynb)<br>[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/teddy8023mars/Skin-lesion-classification/blob/main/task2-attribute-detection.ipynb) | Multi-label U-Net | — | *implementation only, not yet trained* |
+| **Task 3** — lesion classification | [`task3`](task3-lesion-classification.ipynb)<br>[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/teddy8023mars/Skin-lesion-classification/blob/main/task3-lesion-classification.ipynb) | Small CNN (7-class) | Test accuracy | **0.615** |
 
-## Technical Implementation
+<sub>Task 1 also reports recall 0.906 / precision 0.871. Task 3's 61.5% is on 7 highly imbalanced classes (random baseline ≈ 14%); see [What I'd do differently](#what-id-do-differently) for why this number is lower than it should be.</sub>
 
-### Task 1: Skin Lesion Segmentation (skin lesion task-1.ipynb)
+---
 
-#### Principles
-The skin lesion segmentation task aims to precisely locate and delineate lesion regions in images, which is a critical first step in automated skin lesion analysis. This task employs semantic segmentation techniques to classify each pixel as either "lesion region" or "non-lesion region."
+## Task 1 — Lesion boundary segmentation
 
-#### Model Architecture: U-Net
-![U-Net Architecture](https://lmb.informatik.uni-freiburg.de/people/ronneber/u-net/u-net-architecture.png)
+Pixel-wise segmentation of the lesion region: the first step of any automated dermoscopy pipeline.
 
-U-Net is a classic model for medical image segmentation with the following characteristics:
-- **Encoder-Decoder Structure**: Captures contextual information through downsampling and recovers spatial resolution through upsampling
-- **Skip Connections**: Links corresponding encoder and decoder layers to preserve high-resolution features
-- **Symmetric Structure**: Ensures balanced feature dimension processing
+**Encoder ablation.** Rather than accepting one architecture, I trained and compared six:
 
-Core Implementation:
-```python
-def unet_model(input_size=(256, 256, 3)):
-    inputs = Input(input_size)
-    
-    # Encoder path
-    c1 = Conv2D(16, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(inputs)
-    c1 = Dropout(0.1)(c1)
-    c1 = Conv2D(16, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(c1)
-    p1 = MaxPooling2D((2, 2))(c1)
-    
-    # ... more encoding layers ...
-    
-    # Bottleneck
-    c5 = Conv2D(256, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(p4)
-    c5 = Dropout(0.3)(c5)
-    c5 = Conv2D(256, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(c5)
-    
-    # Decoder path
-    u6 = Conv2DTranspose(128, (2, 2), strides=(2, 2), padding='same')(c5)
-    u6 = concatenate([u6, c4])
-    c6 = Conv2D(128, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(u6)
-    
-    # ... more decoding layers ...
-    
-    # Output layer
-    outputs = Conv2D(1, (1, 1), activation='sigmoid')(c9)
-    
-    model = Model(inputs=[inputs], outputs=[outputs])
-    return model
-```
+![Segmentation results across six architectures](assets/segmentation-results.png)
 
-#### Data Processing
-- **Data Augmentation**: Rotation, scaling, horizontal and vertical flipping to enhance model generalization
-- **Data Normalization**: Scaling pixel values to the [0,1] range to accelerate model convergence
-- **Random Cropping**: Cropping regions from original images to increase training sample diversity
+U-Net (from scratch), VGG16-U-Net, VGG19-U-Net, DenseNet121-U-Net, Double U-Net, and ResNet50-U-Net — all on the same image, against ground truth. Plain U-Net and ResNet50-U-Net produce a spurious second blob here; the ImageNet-pretrained VGG/DenseNet encoders are cleaner. ResNet50-U-Net gave the best overall validation scores and became the primary model.
 
-#### Training Strategy
-- **Loss Function**: Combined binary cross-entropy and Dice loss to balance class imbalance issues
-- **Optimizer**: Adam optimizer with learning rate = 0.0001
-- **Callbacks**: Learning rate scheduling, early stopping, and model checkpoints to prevent overfitting and save the best model
-- **Validation Strategy**: Train-validation split to evaluate model performance
+**Hair-removal preprocessing.** Dermoscopy images are full of occluding body hair, which U-Net happily segments as lesion edge. A black-hat morphology + inpainting pass removes it before training (`u_net_with_hair_removal`).
 
-#### Evaluation Metrics
-- **Dice Coefficient**: Measures the overlap between predicted and ground truth segmentations
-- **IoU (Intersection over Union)**: Standard evaluation metric for segmentation tasks
-- **Accuracy**: Pixel-level classification accuracy
-- **Sensitivity and Specificity**: Evaluate the model's ability to identify lesion and healthy regions respectively
+**Other techniques:** combined Dice + binary cross-entropy loss, Jaccard-optimized variant, test-time augmentation (horizontal / vertical / both flips), Dice / IoU / recall / precision tracked per epoch.
 
-#### Results Visualization
-![Segmentation Results](https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcThUfbGUbo8n-PREwipG7ByhgmRcgpczU9pDQ&s)
+## Task 2 — Lesion attribute detection
 
-#### Challenges and Solutions
-1. **Boundary Ambiguity**: Skin lesion boundaries are often unclear
-   - Solution: Edge enhancement preprocessing and boundary-aware loss functions
-   
-2. **Data Imbalance**: Background pixels far outnumber lesion region pixels
-   - Solution: Weighted loss functions and Dice loss, giving higher weights to minority classes
-   
-3. **Small Lesion Detection**: Model struggles to detect small lesions
-   - Solution: Multi-scale feature fusion and attention mechanisms
+> **Added in 2026.** Task 2 was skipped when I first built this project — which is why the notebooks used to jump from 1 to 3. It's now implemented, but **not yet trained**: every cell is written and Colab-ready with outputs cleared, and no result numbers are filled in anywhere.
 
-### Task 3: Skin Lesion Classification (skin lesion task-3.ipynb)
+Detect five dermoscopic attributes as **per-pixel binary masks**, using the same input images as Task 1 (hence the `t12` in the dataset paths):
 
-#### Principles
-The skin lesion classification task aims to categorize skin lesion images into different types of skin diseases, such as benign nevi, basal cell carcinoma, melanoma, etc. This task employs transfer learning methods, using pre-trained models to extract features before fine-tuning for skin lesion classification.
+| Attribute | Mask file suffix | Present in training set |
+|---|---|---|
+| Pigment network | `_attribute_pigment_network.png` | 58.7% of images |
+| Globules | `_attribute_globules.png` | 24.4% |
+| Milia-like cysts | `_attribute_milia_like_cyst.png` | 26.2% |
+| Negative network | `_attribute_negative_network.png` | 7.5% |
+| Streaks | `_attribute_streaks.png` | 3.9% |
 
-#### Model Architecture: EfficientNet
-![EfficientNet Architecture](https://blog.roboflow.com/content/images/2024/04/image-1081.webp)
+<sub>Frequencies from Le et al., *TATL: Task Agnostic Transfer Learning for Skin Attributes Detection*, Medical Image Analysis 2022 ([arXiv:2104.01641](https://arxiv.org/abs/2104.01641)).</sub>
 
-The EfficientNet series of models is known for its efficient parameter utilization and exceptional performance, with the following features:
-- **Compound Scaling**: Simultaneously scales network depth, width, and resolution for optimal performance
-- **Mobile Inverted Bottleneck Structure**: Reduces parameter count and computational complexity
-- **Swish Activation Function**: Enhances non-linear expression capability
+**Why this is much harder than Task 1.** A lesion boundary is one large, high-contrast, always-present object. These attributes are faint, tiny, scattered, **co-occurring**, and often absent — streaks appear in under 4% of images. Design consequences:
 
-Core Implementation:
-```python
-def create_model(input_shape=(224, 224, 3), num_classes=7):
-    # Load pre-trained EfficientNetB0
-    base_model = EfficientNetB0(weights='imagenet', 
-                                include_top=False, 
-                                input_shape=input_shape)
-    
-    # Freeze the base model
-    for layer in base_model.layers:
-        layer.trainable = False
-        
-    # Add classification head
-    x = base_model.output
-    x = GlobalAveragePooling2D()(x)
-    x = BatchNormalization()(x)
-    x = Dropout(0.5)(x)
-    x = Dense(512, activation='relu')(x)
-    x = BatchNormalization()(x)
-    x = Dropout(0.5)(x)
-    x = Dense(128, activation='relu')(x)
-    x = BatchNormalization()(x)
-    x = Dropout(0.25)(x)
-    predictions = Dense(num_classes, activation='softmax')(x)
-    
-    model = Model(inputs=base_model.input, outputs=predictions)
-    return model
-```
+- **Five independent sigmoids, not softmax.** Attributes co-occur in the same pixel, so this is multi-label segmentation: output shape `(256, 256, 5)`.
+- **Loss must fight sparsity.** Combined Dice + binary cross-entropy, with positive weights *measured from the data* in the EDA cell rather than hard-coded.
+- **Nearest-neighbour mask resizing.** Bilinear interpolation puts grey fringes on these structures and erases the smallest cysts outright.
+- **Pooled Jaccard, not per-image average.** The official metric pools every prediction pixel across the whole dataset, precisely because many images have no positive pixels for a given attribute — per-image averaging would be undefined or misleading. The notebook implements the official pooled version.
+- **Per-attribute threshold search.** Heavy positive weighting makes 0.5 the wrong operating point; thresholds are fitted on validation only.
 
-#### Data Processing
-- **Data Augmentation**: Rotation, scaling, translation, brightness adjustment, etc., to enhance model robustness to different imaging conditions
-- **Image Normalization**: Conforming to the input requirements of ImageNet pre-trained models
-- **Class Balancing**: Using class weights or oversampling to handle class imbalance issues
+**Calibration before you look at any number.** The Task 2 *winner* scored **0.292 average Jaccard** (pigment network 0.563 down to streaks 0.156) — about a third of what a plain U-Net achieves on Task 1. A macro Jaccard of 0.1–0.2 from a single un-pretrained U-Net here is a reasonable outcome, not a broken model. The notebook says so explicitly, with sources, so that the eventual result gets read correctly.
 
-#### Training Strategy
-- **Two-Stage Training**:
-  1. Freeze the base model and train only the classification head
-  2. Unfreeze some base model layers for fine-tuning
-- **Loss Function**: Categorical cross-entropy with class weights
-- **Optimizer**: Adam optimizer with a smaller learning rate for fine-tuning
-- **Learning Rate Scheduling**: Using ReduceLROnPlateau to dynamically adjust learning rates
-- **Early Stopping**: Monitor validation performance to avoid overfitting
+## Task 3 — Disease classification
 
-#### Evaluation Metrics
-- **Accuracy**: Overall classification accuracy
-- **Confusion Matrix**: Detailed display of classification results between categories
-- **Precision, Recall, F1 Score**: Detailed evaluation metrics for each category
-- **ROC Curve and AUC**: Evaluate the model's ability to distinguish between different categories
+Seven-class classification over the HAM10000-derived Task 3 set:
 
-#### Results Visualization
-![Classification Results and Confusion Matrix](https://www.mdpi.com/sensors/sensors-22-04399/article_deploy/html/images/sensors-22-04399-g001.png)
+| Code | Class | | Code | Class |
+|---|---|---|---|---|
+| MEL | Melanoma 黑素瘤 | | AKIEC | Actinic keratoses 日光性角化 |
+| NV | Melanocytic nevi 痣 | | BKL | Benign keratosis-like 良性角化 |
+| BCC | Basal cell carcinoma 基底细胞癌 | | DF | Dermatofibroma 皮肤纤维瘤 |
+| | | | VASC | Vascular lesions 血管病变 |
 
-#### Challenges and Solutions
-1. **Class Imbalance**: Significant differences in sample numbers between different skin lesion categories
-   - Solution: Class weight adjustment, oversampling minority classes, undersampling majority classes
-   
-2. **Domain Transfer Issues**: Differences between the pre-trained model domain and skin images
-   - Solution: Layer-by-layer unfreezing for fine-tuning, domain adaptation techniques
-   
-3. **Visual Similarity**: Some skin lesion categories have similar visual features and are difficult to distinguish
-   - Solution: Using attention mechanisms and higher resolution inputs to focus on subtle differences
+![Sample images by class](assets/class-samples.png)
 
-## Project Innovations
+**Class imbalance.** NV dominates the dataset by an order of magnitude. I resampled every class to a fixed count (tried 500 / 1000 / 3000 per class) so the model couldn't win by always predicting NV.
 
-1. **Combined Segmentation and Classification**: Integrating segmentation and classification tasks to form a complete skin lesion analysis pipeline
-2. **Multi-Level Loss Functions**: Designing combination loss functions tailored to skin lesion characteristics
-3. **Feature Enhancement Modules**: Introducing attention mechanisms to enhance feature extraction in key lesion areas
-4. **Multi-Scale Feature Fusion**: Utilizing both local details and global contextual information
+**Specificity, not just accuracy.** In cancer screening a false negative means a missed diagnosis, so I implemented specificity as a custom Keras metric and tracked it alongside accuracy.
 
-## Requirements
+<table>
+<tr>
+<td><img src="assets/training-accuracy-classification.png" alt="Training accuracy"></td>
+<td><img src="assets/training-loss-classification.png" alt="Training loss"></td>
+</tr>
+</table>
 
-```
-tensorflow>=2.4.0
-keras>=2.4.0
-opencv-python>=4.1.2
-numpy>=1.19.2
-pandas>=1.1.3
-matplotlib>=3.3.2
-scikit-learn>=0.23.2
-pillow>=8.0.1
-```
+Training and validation curves track each other closely over 50 epochs — no overfitting, but both plateau early, which is the tell that the model is underpowered rather than over-trained.
 
-## Usage Instructions
+**Error analysis.** A confusion matrix and a per-class error-rate chart show *where* it fails, not just how often:
 
-1. Clone the repository
-```bash
-git clone https://github.com/yourusername/Skin-lesion-classification.git
-cd Skin-lesion-classification
-```
+<table>
+<tr>
+<td><img src="assets/confusion-matrix.png" alt="Confusion matrix"></td>
+<td><img src="assets/per-class-error-rate.png" alt="Per-class error rate"></td>
+</tr>
+</table>
 
-2. Install dependencies
+One class is learned well (~6% error) while several sit near 50% — the imbalance is suppressed, not solved.
+
+---
+
+## What I'd do differently
+
+Written in hindsight, several years and a few production systems later.
+
+**1. The classifier is the weak half, and I know why now.** The model that produced the 61.5% above is a small `Sequential` CNN trained on **32×32** images. Thirty-two pixels is far too small for dermoscopy — the diagnostic signal (pigment network, streaks, asymmetry of border) is exactly the fine texture that resolution destroys. `EfficientNetB0` is imported in the notebook but never actually wired up; transfer learning at 224×224 was the plan I didn't finish. That single change is likely worth more than every other tweak in this repo combined.
+
+**2. I reported the number I wanted, not the number I had.** An earlier version of this README claimed "87% accuracy" and "EfficientNet". Neither was true of the code — the saved output says 0.615, and the architecture was the small CNN. I'd rather show 61.5% with an explanation than a number I can't reproduce. *(Corrected 2026.)*
+
+**3. Resampling is the crudest fix for imbalance.** Upsampling minority classes by duplication invites memorization. Class-weighted loss, focal loss, or heavier augmentation on rare classes would all be better; a stratified k-fold would also give an honest error bar instead of one train/test split.
+
+**4. No cross-validation, no seeds, no fixed splits.** Single split, and `random.seed` set in one notebook but not the other. Today I'd pin every seed and commit the split indices, because "0.615" without a variance estimate isn't really a result.
+
+**5. Segmentation and classification never met.** They're two separate notebooks. The obvious pipeline — segment the lesion, crop to it, then classify — was never built, even though it's the whole point of doing both tasks.
+
+**6. Notebooks were the wrong home for the reusable parts.** Metrics, the data pipeline, and the model builders are copy-pasted between notebooks with small divergences. Extracting them into a small module would have made the ablation trustworthy, since each variant would provably share the same evaluation code.
+
+---
+
+## Setup
+
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Run Jupyter Notebook
-```bash
-jupyter notebook
-```
+The notebooks are written for **Google Colab with a GPU runtime** (they mount Google Drive and use `google.colab` helpers). `requirements.txt` pins the 2021-era TensorFlow 2.5 stack they were built against — see the comments in that file for the two version traps.
 
-4. Run the two tasks in sequence:
-   - First run `skin lesion task-1.ipynb` for segmentation
-   - Then run `skin lesion task-3.ipynb` for classification
+**Data** is not redistributed here. See [`data/README.md`](data/README.md) for the download link and the exact directory layout the notebooks expect.
 
-## Dataset
+Run order: Task 1 → Task 2 → Task 3. They are independent; no notebook consumes another's output.
 
-This project uses the **ISIC 2018: Skin Lesion Analysis Towards Melanoma Detection Challenge** dataset:
-- Official download page: https://challenge.isic-archive.com/data/#2018
-- Dataset contains:
-  - 2594 training images with corresponding segmentation masks
-  - 7 skin lesion categories
-  - High-resolution RGB images
+## License
 
-
-## Conclusions and Future Work
-
-### Conclusions
-1. The U-Net architecture achieved excellent results for skin lesion segmentation, with Dice coefficients above 0.91
-2. The EfficientNet-based classification model achieved 87% accuracy across 7 skin lesion categories
-3. Data augmentation and transfer learning are crucial for improving model generalization
-4. Combined loss functions effectively addressed class imbalance issues
-
-### Future Work
-1. Explore more advanced network architectures, such as Transformers or hybrid CNN-Transformer models
-2. Incorporate more clinical information for multimodal analysis with image features
-3. Develop lightweight models suitable for mobile device deployment
-4. Extend research to more types of skin lesions
-
+MIT — see [LICENSE](LICENSE).
