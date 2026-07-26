@@ -5,6 +5,8 @@
 Deep learning on dermoscopy images for the [ISIC 2018 "Skin Lesion Analysis Towards Melanoma Detection"](https://challenge.isic-archive.com/landing/2018/) challenge, covering all three official tasks: lesion **boundary segmentation**, **attribute detection**, and **disease classification**.
 
 > **This was my first deep learning project** (2021–2022). I've kept it as it was built — including the parts that didn't work — and added an honest write-up of what I'd do differently now. See [What I'd do differently](#what-id-do-differently).
+>
+> **Externally scored, 2026:** the same lineage of models now sits on the live [ISIC MILK10k leaderboard](https://challenge.isic-archive.com/leaderboards/milk10k/) at **macro F1 0.422, rank 133/164**, up from 0.304 on the first attempt. [How](#beyond-2018--a-scored-entry-on-a-live-benchmark) — including a calibration attempt that made things worse and got thrown out.
 
 ## Results
 
@@ -266,6 +268,80 @@ Interpretability was not free here — it cost half the balanced accuracy. But t
 
 ---
 
+## Beyond 2018 — a scored entry on a live benchmark
+
+*Added 2026. Raw metrics: [`assets/milk10k-results.json`](assets/milk10k-results.json), [`assets/milk10k-run2-training.json`](assets/milk10k-run2-training.json)*
+
+ISIC 2018 closed in 2018, but ISIC runs **[live leaderboards](https://challenge.isic-archive.com/leaderboards/live/)** that still accept submissions. The current one is **MILK10k**: 11-class lesion diagnosis from *paired* dermoscopic and clinical close-up views, scored by **macro F1**. It is a harder and more honest test than a self-chosen split, so I entered it twice.
+
+| | Approach | Official score | Rank |
+|---|---|---|---|
+| Run 1 | EfficientNetB0 @224, two-view, argmax softmax | **0.304** | 154 / 164 |
+| Run 2 | EfficientNetV2S @288 + MONET features + TTA | **0.422** | **133 / 164** |
+
+<sub>For scale: leaderboard top is 0.705, median 0.471. This is a real, externally scored result — not a number I computed on my own split.</sub>
+
+### What the +0.118 came from
+
+Held-out macro F1 went 0.369 → 0.443; the leaderboard moved further, 0.304 → 0.422.
+
+**Selecting on the right metric.** Run 1 kept the checkpoint with the best validation *accuracy* while the leaderboard scores *macro F1*. Those are opposing objectives — accuracy rewards BCC (48% of lesions), macro F1 weights all eleven classes equally. Run 2 selects on validation macro F1 directly. This was the cheapest fix and probably the largest single one.
+
+**Using the tabular data that ships with the task.** The official supplement includes seven **MONET concept probabilities** — ulceration/crust, hair, *vasculature/vessels*, *erythema*, pigmentation, dermoscopy fluid, skin markings — plus age, sex and anatomic site. Vasculature and erythema are precisely the evidence BCC, VASC and INF are diagnosed on, and they are exactly what the ISIC 2018 attribute vocabulary *cannot* express (see [the concept bottleneck's failure](#bonus--a-concept-bottleneck-and-what-it-costs) — the same gap, now filled from a different direction). A 17-dimensional dense branch concatenated with the two image encoders.
+
+**Skin tone is excluded from the model's inputs** even though it is available, and used only for the audit below. Conditioning a diagnosis on skin tone would bake a demographic prior into the prediction.
+
+**Stronger encoder, more pixels, TTA.** EfficientNetV2S at 288px instead of B0 at 224px, shared across both views; 4× flip TTA.
+
+### The probability format was worth 0.019, and the calibration was worth −0.027
+
+The scorer thresholds at **≥0.5**. Run 1 submitted plain softmax, so **174 of 786** held-out lesions had no class above the bar and scored as misses even when the argmax was right.
+
+The obvious fix — fit per-class priors and a temperature on validation — **backfired**:
+
+| | Validation | Held-out |
+|---|---|---|
+| Before calibration | 0.381 | **0.425** |
+| After calibration | 0.421 ✅ | **0.398** ❌ |
+
+Eleven free parameters against a 786-lesion validation set where some classes have single-digit counts. Validation gained 0.041; the held-out split lost 0.027. Textbook overfitting, and it would have been invisible without a third split.
+
+So I scored four probability formats on the *same* held-out split and picked by evidence:
+
+| Format | Thresholded macro F1 | argmax macro F1 | Rows below 0.5 |
+|---|---|---|---|
+| Raw softmax | 0.4248 | 0.4434 | 174 |
+| Temperature only (T=0.9) | 0.4335 | 0.4434 | 146 |
+| Priors + temperature | 0.3981 | 0.4160 | 125 |
+| **Confident argmax** | **0.4434** | 0.4434 | **0** |
+
+The winner reaches exactly the argmax ceiling, because it is the only format that leaves nothing on the wrong side of 0.5. The two knobs are not equivalent and that is the point: **temperature cannot change the argmax** (one parameter, monotone per class, so it only decides whether the chosen class clears the bar), while **priors move the decision itself** — and priors are what overfit. Worth noting too that the temperature sweep chose T=0.9 on validation while the held-out optimum sat near 0.5: this validation set cannot reliably tune even *one* parameter.
+
+None of this is score-gaming. Our decision rule is argmax; a flat softmax simply prevents the scorer from seeing that decision.
+
+### Skin-tone fairness audit
+
+This closes the gap the retrospective called the largest remaining one. MILK10k ships a six-level skin tone label (0 = very dark → 5 = very light), which ISIC 2018 does not.
+
+| Skin tone | Held-out lesions | macro F1 | Melanomas | MEL sensitivity |
+|---|---|---|---|---|
+| 0 (very dark) | 3 | *withheld* | — | — |
+| 1 | 14 | 0.347 | 3 | 1.000 |
+| 2 | 86 | 0.488 | 19 | 0.632 |
+| 3 | 441 | 0.427 | 30 | 0.700 |
+| 4 | 171 | 0.485 | 11 | 0.364 |
+| 5 (very light) | 71 | 0.329 | 5 | 0.200 |
+
+Metrics are withheld wherever fewer than five lesions fall in a stratum — a point estimate on n=3 is not a result, and reporting one would be worse than reporting nothing.
+
+**The finding is about the data, not the model.** Training lesions by skin tone: `0: 6 · 1: 105 · 2: 506 · 3: 3174 · 4: 1066 · 5: 383`. The darkest tone is **6 of 5240 lesions — 0.1%**. So the model has essentially never seen very dark skin, and this benchmark **cannot measure** how it performs there. That is not fixable by reweighting a loss; it is a data-collection problem, and it matters because melanoma carries higher mortality in darker-skinned patients precisely because it is caught later.
+
+The per-tone numbers that *are* reportable should be read with matching caution. Melanoma sensitivity appears to fall as skin gets lighter (1.000 at tone 1 down to 0.200 at tone 5), which inverts the usual concern — but those two strata contain 3 and 5 melanomas respectively. **This is noise, and I am not going to present it as a finding.** The two strata with enough melanomas to say anything (tones 2 and 3, n=19 and n=30) sit at 0.63 and 0.70, and even those are thin.
+
+What an audit like this is genuinely for: it makes the absence of evidence explicit instead of letting an aggregate number imply coverage that does not exist.
+
+---
+
 ## What I'd do differently
 
 Written in hindsight, several years and a few production systems later. Where the 2026 pass actually fixed something, it says so — the rest are still open.
@@ -284,7 +360,7 @@ Written in hindsight, several years and a few production systems later. Where th
 
 **7. ⬜ Notebooks were the wrong home for the reusable parts.** Metrics, data pipelines and model builders are copy-pasted between notebooks with small divergences. The 2026 Kaggle training scripts repeated this. Extracting them into a module — with unit tests on the metric functions — would make the ablation trustworthy, since every variant would provably share one evaluation path. Concretely: the `dice_macro` used here scores ~1.0 on an empty channel correctly predicted empty, so it is inflated by absent attributes and is only a training signal, never a score. A unit test would have made that obvious immediately instead of requiring a code comment.
 
-**8. ⬜ No fairness audit.** HAM10000 is overwhelmingly light skin (Fitzpatrick I–III). Nothing in this repo measures how these models behave on darker skin, where melanoma carries higher mortality because it is caught later. A 2026 project ought to report metrics stratified by skin tone, using something like Diverse Dermatology Images or Fitzpatrick17k. Not done here, and it is the largest remaining gap.
+**8. ✅ No fairness audit — now done, and the result is about the data.** ISIC 2018 carries no skin-tone label, so this could not be measured on it at all. MILK10k does, and [the audit](#skin-tone-fairness-audit) shows the darkest tone accounts for **6 of 5240 training lesions (0.1%)** — the model has essentially never seen very dark skin and the benchmark cannot measure how it performs there. Reweighting a loss does not fix that; it is a data-collection problem. Strata below five lesions are reported as withheld rather than as point estimates.
 
 ---
 

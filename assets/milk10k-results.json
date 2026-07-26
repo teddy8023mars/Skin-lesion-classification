@@ -1,0 +1,70 @@
+{
+ "variants_holdout": {
+  "A_raw_softmax": {
+   "thresholded_macro_f1": 0.42484210400315503,
+   "argmax_macro_f1": 0.4433782868202853,
+   "rows_below_0.5": 174
+  },
+  "B_temperature_only": {
+   "thresholded_macro_f1": 0.43349364838098087,
+   "argmax_macro_f1": 0.4433782868202853,
+   "rows_below_0.5": 146
+  },
+  "C_run2_priors_plus_T": {
+   "thresholded_macro_f1": 0.3980978042622645,
+   "argmax_macro_f1": 0.41602276439957797,
+   "rows_below_0.5": 125
+  },
+  "D_argmax_onehot": {
+   "thresholded_macro_f1": 0.4433782868202853,
+   "argmax_macro_f1": 0.4433782868202853,
+   "rows_below_0.5": 0
+  }
+ },
+ "winner": "D_argmax_onehot",
+ "temperature_fitted_on_val": 0.9,
+ "run2_priors_overfit": {
+  "val_before": 0.38091403049123596,
+  "val_after": 0.42149392816124576,
+  "holdout_before": 0.42484210400315503,
+  "holdout_after": 0.3980978042622645
+ },
+ "fairness_by_skin_tone": {
+  "0": {
+   "n": 3,
+   "note": "withheld, n<5"
+  },
+  "1": {
+   "n": 14,
+   "macro_f1_present": 0.3466666666666667,
+   "n_melanoma": 3,
+   "melanoma_sensitivity": 1.0
+  },
+  "2": {
+   "n": 86,
+   "macro_f1_present": 0.4883377821246884,
+   "n_melanoma": 19,
+   "melanoma_sensitivity": 0.631578947368421
+  },
+  "3": {
+   "n": 441,
+   "macro_f1_present": 0.42666142699722837,
+   "n_melanoma": 30,
+   "melanoma_sensitivity": 0.7
+  },
+  "4": {
+   "n": 171,
+   "macro_f1_present": 0.48485165659555224,
+   "n_melanoma": 11,
+   "melanoma_sensitivity": 0.36363636363636365
+  },
+  "5": {
+   "n": 71,
+   "macro_f1_present": 0.3294133223261501,
+   "n_melanoma": 5,
+   "melanoma_sensitivity": 0.2
+  }
+ },
+ "run1_leaderboard": 0.304,
+ "run1_rank": "153/163"
+}
