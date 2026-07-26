@@ -1,0 +1,382 @@
+{
+ "A1_per_dimension": {
+  "pigment_network__present": {
+   "kind": "kappa",
+   "kappa": 0.4940481239573614,
+   "accuracy": 0.7634961439588689,
+   "gt_positive_rate": 0.5758354663848877,
+   "pred_positive_rate": 0.714652955532074
+  },
+  "pigment_network__area_frac": {
+   "kind": "spearman",
+   "rho": 0.6863229420572343
+  },
+  "pigment_network__n_blobs": {
+   "kind": "spearman",
+   "rho": 0.4985348059723359
+  },
+  "pigment_network__asymmetry": {
+   "kind": "spearman",
+   "rho": 0.4104951777943925
+  },
+  "negative_network__present": {
+   "kind": "kappa",
+   "kappa": 0.2545923087088674,
+   "accuracy": 0.8508997429305912,
+   "gt_positive_rate": 0.06940873712301254,
+   "pred_positive_rate": 0.15167094767093658
+  },
+  "negative_network__area_frac": {
+   "kind": "spearman",
+   "rho": 0.29453416485510975
+  },
+  "negative_network__n_blobs": {
+   "kind": "spearman",
+   "rho": 0.2941969844152308
+  },
+  "negative_network__asymmetry": {
+   "kind": "spearman",
+   "rho": 0.26104886226598134
+  },
+  "streaks__present": {
+   "kind": "kappa",
+   "kappa": 0.3122651933701657,
+   "accuracy": 0.9588688946015425,
+   "gt_positive_rate": 0.02827763557434082,
+   "pred_positive_rate": 0.03341902419924736
+  },
+  "streaks__area_frac": {
+   "kind": "spearman",
+   "rho": 0.318628769773911
+  },
+  "streaks__n_blobs": {
+   "kind": "spearman",
+   "rho": 0.3508698947166051
+  },
+  "streaks__asymmetry": {
+   "kind": "spearman",
+   "rho": 0.31558365086998635
+  },
+  "milia_like_cyst__present": {
+   "kind": "kappa",
+   "kappa": 0.18709003308759498,
+   "accuracy": 0.6298200514138818,
+   "gt_positive_rate": 0.26221078634262085,
+   "pred_positive_rate": 0.4061696529388428
+  },
+  "milia_like_cyst__area_frac": {
+   "kind": "spearman",
+   "rho": 0.2874528518324299
+  },
+  "milia_like_cyst__n_blobs": {
+   "kind": "spearman",
+   "rho": 0.26070692757801145
+  },
+  "milia_like_cyst__asymmetry": {
+   "kind": "spearman",
+   "rho": 0.2071333709297625
+  },
+  "globules__present": {
+   "kind": "kappa",
+   "kappa": 0.42727883474606554,
+   "accuracy": 0.7352185089974294,
+   "gt_positive_rate": 0.2673521935939789,
+   "pred_positive_rate": 0.4190231263637543
+  },
+  "globules__area_frac": {
+   "kind": "spearman",
+   "rho": 0.575562599470293
+  },
+  "globules__n_blobs": {
+   "kind": "spearman",
+   "rho": 0.5304591931680988
+  },
+  "globules__asymmetry": {
+   "kind": "spearman",
+   "rho": 0.47349964282853013
+  }
+ },
+ "A2_cross_channel_jaccard": [
+  [
+   0.40995186825883323,
+   0.006479696701403727,
+   0.0022067399601095952,
+   0.006242002226912403,
+   0.047173499577345734
+  ],
+  [
+   0.0021647065894226662,
+   0.13145393313558,
+   0.0,
+   0.009150485929352567,
+   0.006139644090227976
+  ],
+  [
+   0.002086629314394827,
+   0.0,
+   0.10706521739130435,
+   1.6828783952071623e-05,
+   0.0027330185190694986
+  ],
+  [
+   0.006663053394932335,
+   0.017653206222228907,
+   0.0,
+   0.06403229538147323,
+   0.006303605818413284
+  ],
+  [
+   0.01497674283413422,
+   0.010957054725461267,
+   0.003883706940432199,
+   0.00686631369953673,
+   0.28931629343178034
+  ]
+ ],
+ "A2_diagonal": [
+  0.40995186825883323,
+  0.13145393313558,
+  0.10706521739130435,
+  0.06403229538147323,
+  0.28931629343178034
+ ],
+ "A2_best_offdiagonal": [
+  0.01497674283413422,
+  0.017653206222228907,
+  0.003883706940432199,
+  0.009150485929352567,
+  0.047173499577345734
+ ],
+ "A2_diagonal_wins": 5,
+ "A3_merged_blob_jaccard": [
+  0.33429698732774865,
+  0.01582320520651717,
+  0.0025489372623130587,
+  0.011595371231235,
+  0.10505537252163939
+ ],
+ "A3_macro_own": 0.20036392151979424,
+ "A3_macro_merged": 0.09386397470989065,
+ "A4_ground_truth": {
+  "mean_abs_r": 0.042819210152881725,
+  "max_abs_r": 0.12659360818998203,
+  "pc1_frac": 0.22935772481135205,
+  "dims_used": 5
+ },
+ "A4_predicted": {
+  "mean_abs_r": 0.056075155076143,
+  "max_abs_r": 0.14548506794797175,
+  "pc1_frac": 0.24887281013095,
+  "dims_used": 5
+ },
+ "split_source": "identical to the EfficientNet black-box run",
+ "blackbox": {
+  "accuracy": 0.8010645375914837,
+  "balanced_accuracy": 0.7033213540577077,
+  "macro_f1": 0.6547869592721182,
+  "macro_auc_ovr": 0.9439233154008833,
+  "sensitivity": {
+   "MEL": 0.41916167664670656,
+   "NV": 0.8916500994035785,
+   "BCC": 0.8571428571428571,
+   "AKIEC": 0.5918367346938775,
+   "BKL": 0.6848484848484848,
+   "DF": 0.7058823529411765,
+   "VASC": 0.7727272727272727
+  }
+ },
+ "cbm_logreg": {
+  "accuracy": 0.6373918829008649,
+  "balanced_accuracy": 0.20665201467719924,
+  "macro_f1": 0.21168426926741027,
+  "macro_auc_ovr": 0.7309162834735375,
+  "sensitivity": {
+   "MEL": 0.25748502994011974,
+   "NV": 0.8926441351888668,
+   "BCC": 0.09090909090909091,
+   "AKIEC": 0.0,
+   "BKL": 0.04242424242424243,
+   "DF": 0.11764705882352941,
+   "VASC": 0.045454545454545456
+  }
+ },
+ "cbm_confusion": [
+  [
+   43,
+   118,
+   3,
+   0,
+   2,
+   1,
+   0
+  ],
+  [
+   50,
+   898,
+   25,
+   9,
+   12,
+   6,
+   6
+  ],
+  [
+   1,
+   66,
+   7,
+   0,
+   1,
+   0,
+   2
+  ],
+  [
+   1,
+   45,
+   3,
+   0,
+   0,
+   0,
+   0
+  ],
+  [
+   16,
+   133,
+   6,
+   0,
+   7,
+   3,
+   0
+  ],
+  [
+   1,
+   14,
+   0,
+   0,
+   0,
+   2,
+   0
+  ],
+  [
+   0,
+   21,
+   0,
+   0,
+   0,
+   0,
+   1
+  ]
+ ],
+ "cbm_tree": {
+  "accuracy": 0.6400532268795742,
+  "balanced_accuracy": 0.19492405002381427,
+  "macro_f1": 0.18196673633641597
+ },
+ "B3_leverage_fidelity": [
+  {
+   "dim": "pigment_network__area_frac",
+   "leverage": 1.0,
+   "fidelity": 0.6863229420572343
+  },
+  {
+   "dim": "negative_network__area_frac",
+   "leverage": 0.40131938455583616,
+   "fidelity": 0.29453416485510975
+  },
+  {
+   "dim": "globules__area_frac",
+   "leverage": 0.37518966356169264,
+   "fidelity": 0.575562599470293
+  },
+  {
+   "dim": "pigment_network__n_blobs",
+   "leverage": 0.2526251397880691,
+   "fidelity": 0.4985348059723359
+  },
+  {
+   "dim": "pigment_network__present",
+   "leverage": 0.24890569695184198,
+   "fidelity": 0.4940481239573614
+  },
+  {
+   "dim": "negative_network__asymmetry",
+   "leverage": 0.23845512622037882,
+   "fidelity": 0.26104886226598134
+  },
+  {
+   "dim": "streaks__present",
+   "leverage": 0.23738306161973446,
+   "fidelity": 0.3122651933701657
+  },
+  {
+   "dim": "milia_like_cyst__area_frac",
+   "leverage": 0.23312784367550254,
+   "fidelity": 0.2874528518324299
+  },
+  {
+   "dim": "milia_like_cyst__present",
+   "leverage": 0.21782761804499887,
+   "fidelity": 0.18709003308759498
+  },
+  {
+   "dim": "milia_like_cyst__n_blobs",
+   "leverage": 0.1997085205394395,
+   "fidelity": 0.26070692757801145
+  },
+  {
+   "dim": "pigment_network__asymmetry",
+   "leverage": 0.197873788300896,
+   "fidelity": 0.4104951777943925
+  },
+  {
+   "dim": "negative_network__present",
+   "leverage": 0.1682441993736178,
+   "fidelity": 0.2545923087088674
+  },
+  {
+   "dim": "streaks__asymmetry",
+   "leverage": 0.16676612174418534,
+   "fidelity": 0.31558365086998635
+  },
+  {
+   "dim": "globules__present",
+   "leverage": 0.16484732708784158,
+   "fidelity": 0.42727883474606554
+  },
+  {
+   "dim": "negative_network__n_blobs",
+   "leverage": 0.15516600717952692,
+   "fidelity": 0.2941969844152308
+  },
+  {
+   "dim": "milia_like_cyst__asymmetry",
+   "leverage": 0.13867239728827127,
+   "fidelity": 0.2071333709297625
+  },
+  {
+   "dim": "streaks__area_frac",
+   "leverage": 0.1329957170818614,
+   "fidelity": 0.318628769773911
+  },
+  {
+   "dim": "streaks__n_blobs",
+   "leverage": 0.11286819390319518,
+   "fidelity": 0.3508698947166051
+  },
+  {
+   "dim": "globules__n_blobs",
+   "leverage": 0.10380737567878781,
+   "fidelity": 0.5304591931680988
+  },
+  {
+   "dim": "globules__asymmetry",
+   "leverage": 0.10277586242098091,
+   "fidelity": 0.47349964282853013
+  }
+ ],
+ "B4_intervention": {
+  "pigment_network": 0.1370592149035263,
+  "negative_network": 0.02927478376580173,
+  "streaks": 0.0166333998669328,
+  "milia_like_cyst": 0.0332667997338656,
+  "globules": 0.09913506320691949
+ }
+}

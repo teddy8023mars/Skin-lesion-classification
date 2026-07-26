@@ -14,10 +14,10 @@ Measured numbers, taken from the notebooks' own saved outputs:
 |---|---|---|---|---|
 | **Task 1** — lesion segmentation | [`task1`](task1-lesion-segmentation.ipynb)<br>[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/teddy8023mars/Skin-lesion-classification/blob/main/task1-lesion-segmentation.ipynb) | ResNet50-U-Net | Jaccard / Dice / Accuracy | **0.793** / 0.873 / 0.933 |
 | **Task 2** — attribute detection | [`task2`](task2-attribute-detection.ipynb)<br>[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/teddy8023mars/Skin-lesion-classification/blob/main/task2-attribute-detection.ipynb) | ResNet50 multi-label U-Net | pooled Jaccard (macro) | **0.200** |
-| **Bonus** — concept bottleneck | [`cbm`](concept-bottleneck-pipeline.ipynb) | Task2 attributes → interpretable classifier | *see notebook* | *implementation, not yet trained* |
+| **Bonus** — concept bottleneck | [`cbm`](concept-bottleneck-pipeline.ipynb) | 20 named concepts → logistic regression | Balanced acc / macro-F1 / AUC | 0.207 / 0.212 / 0.731 |
 | **Task 3** — lesion classification | [`task3`](task3-lesion-classification.ipynb)<br>[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/teddy8023mars/Skin-lesion-classification/blob/main/task3-lesion-classification.ipynb) | EfficientNetB0 @224 (2026)<br><sub>2021: small CNN @32 — leaked</sub> | Balanced acc / macro-F1 / AUC | **0.703** / 0.655 / 0.944 |
 
-<sub>Task 1 also reports recall 0.906 / precision 0.871. Task 2 is the unweighted mean of five per-attribute pooled Jaccards — see [the metric trap](#a-metric-trap-in-the-task-2-literature) before comparing it to other papers. Task 3's headline accuracy is 0.801, but the majority-class baseline is 0.669, so balanced accuracy is the honest figure; **melanoma sensitivity is only 0.419** and that is the number that matters. The 2021 notebook's widely-quoted 61.5% is invalid — it leaked. Full metrics: [`assets/task2-results.json`](assets/task2-results.json), [`assets/task3-results.json`](assets/task3-results.json).</sub>
+<sub>Task 1 also reports recall 0.906 / precision 0.871. Task 2 is the unweighted mean of five per-attribute pooled Jaccards — see [the metric trap](#a-metric-trap-in-the-task-2-literature) before comparing it to other papers. Task 3's headline accuracy is 0.801, but the majority-class baseline is 0.669, so balanced accuracy is the honest figure; **melanoma sensitivity is only 0.419** and that is the number that matters. The 2021 notebook's widely-quoted 61.5% is invalid — it leaked. The concept bottleneck trades roughly half the balanced accuracy for an explanation — [why, and what would fix it](#bonus--a-concept-bottleneck-and-what-it-costs). Full metrics: [`assets/task2-results.json`](assets/task2-results.json), [`assets/task3-results.json`](assets/task3-results.json), [`assets/cbm-results.json`](assets/cbm-results.json).</sub>
 
 ---
 
@@ -92,7 +92,9 @@ Three things worth extracting from this:
 
 Ground truth uses all five colours; the predictions are dominated by one coarse blue (globules) contour tracing roughly the whole lesion, with the fine pigment-network mesh largely missed. (These four are the most densely annotated test images, deliberately picked, so they are not typical — but the direction is real.)
 
-The honest reading: **the model has likely learned a coarse "where is the lesion" prior more than genuine attribute-texture discrimination.** Because attribute masks mostly sit inside the lesion, predicting "the whole lesion" already earns a non-trivial Jaccard. This is a concrete, testable hypothesis, and it is exactly what the concept-fidelity check in the [concept bottleneck pipeline](concept-bottleneck-pipeline.ipynb) exists to catch: concepts that encode lesion area rather than dermoscopic structure would make an "interpretable" bottleneck interpretable in name only.
+This looked like evidence that the model had learned a coarse "where is the lesion" prior and replicated it across five channels, rather than genuine attribute-texture discrimination — attribute masks mostly sit inside the lesion, so predicting "the whole lesion" already earns a non-trivial Jaccard.
+
+**That hypothesis was tested and refuted.** Three quantitative checks — cross-channel Jaccard, a merged-blob baseline, and PCA of the concept dimensions — all show the five channels are genuinely specialised. See [the fidelity tests](#first-are-the-concepts-actually-concepts). The visual impression came from picking the most densely annotated images plus a real tendency to over-predict extent (a consequence of 50× positive weights), not from channel collapse.
 
 ### A metric trap in the Task 2 literature
 
@@ -177,6 +179,90 @@ Routing the least-confident cases to a human buys 95% accuracy on half the volum
 The first 2026 run scored only 0.635 — barely above the leaky 0.615 — because of a bug I introduced: phase 2's `ModelCheckpoint` restarted its best-score tracking from scratch and **overwrote phase 1's better weights** (val 0.787) with a worse fine-tuned model (val 0.645). Fine-tuning had also been degrading the backbone because BatchNorm layers were left trainable, so their statistics were being rewritten on small batches. Freezing BN and keeping one checkpoint per phase, then explicitly choosing the winner, turned 0.635 into 0.801.
 
 The lesson generalises: a two-phase training script needs *one* notion of "best", and a plausible-looking marginal improvement is often a bug rather than a ceiling.
+
+---
+
+## Bonus — a concept bottleneck, and what it costs
+
+*Added 2026, trained on free Kaggle GPU. Notebook: [`concept-bottleneck-pipeline.ipynb`](concept-bottleneck-pipeline.ipynb) · raw metrics: [`assets/cbm-results.json`](assets/cbm-results.json)*
+
+The three ISIC tasks never talked to each other. Chaining them gives a model that states its reasoning in the vocabulary a dermatologist already uses:
+
+```
+image → [Task 2 attribute model] → 20 named concepts → [logistic regression] → diagnosis + rationale
+```
+
+The bottleneck is 5 attributes × 4 scalars each — `present`, `area_frac`, `n_blobs` (multifocality), `asymmetry` — so every one of the 20 dimensions has a name and a clinical reading. The classifier is deliberately a logistic regression: its coefficients *are* the explanation.
+
+**A structural constraint, measured rather than assumed:** Task 1-2 images (`ISIC_0000000`–`ISIC_0016072`, 2,594) and Task 3 / HAM10000 (`ISIC_0024306`–`ISIC_0034320`, 10,015) share **zero image ids** — different contributing institutions. So concepts for Task 3 images must be *predicted*, never read from ground truth. That is also the real deployment setting: no clinician hands you attribute annotations at inference time.
+
+### First: are the "concepts" actually concepts?
+
+A bottleneck whose concepts don't mean what they claim is a black box wearing a costume. Looking at the Task 2 predictions qualitatively, I suspected exactly that — that the model had learned a coarse "where is the lesion" prior and replicated it across five channels. Three tests on the Task 2 held-out split, the only place ground-truth concepts exist:
+
+![Concept fidelity tests](assets/cbm-concept-fidelity.png)
+
+**The suspicion was wrong.** All three tests refute channel collapse:
+
+| Test | Result |
+|---|---|
+| **Cross-channel Jaccard** — does predicted channel *j* explain GT attribute *k*? | Diagonal wins **5/5**. Pigment network scores 0.410 on its own channel; the best other channel manages 0.015. Off-diagonals are 0.000–0.047 throughout. |
+| **"One merged blob"** — union all five predictions, score against each GT | Macro Jaccard drops 0.200 → **0.094**. Streaks collapses 0.107 → 0.0025 (43×), negative network 0.132 → 0.016. Channel identity carries most of the signal. |
+| **PCA of the five `area_frac` dims** | Ground truth PC1 = 22.9%, predicted PC1 = **24.9%**; mean pairwise \|r\| 0.043 vs 0.056. The predicted concepts have almost the same correlational structure as ground truth. |
+
+Why the qualitative read misled me: those four figures were the *most densely annotated* test images, deliberately picked, and the model genuinely **over-predicts presence** — globules positive rate 0.42 against a ground-truth 0.27, milia-like cysts 0.41 against 0.26. That is the expected consequence of positive weights up to 50×. Over-predicted extent is not channel collapse, but one thick contour dominates the eye. *Qualitative figures generate hypotheses; they cannot test them.*
+
+Fidelity is nevertheless only **moderate** — presence agreement (Cohen's κ) 0.19–0.49, continuous agreement (Spearman ρ) 0.21–0.69, best for pigment network, worst for milia-like cysts. The concepts are real but noisy.
+
+### Then: the bottleneck's accuracy cost
+
+Trained on the **identical test split** the black-box EfficientNet used, so this is a like-for-like comparison:
+
+| Metric | Black box (EfficientNetB0) | Concept bottleneck | Δ |
+|---|---|---|---|
+| Accuracy | 0.801 | 0.637 | −0.164 |
+| **Balanced accuracy** | 0.703 | **0.207** | **−0.497** |
+| Macro F1 | 0.655 | 0.212 | −0.443 |
+| Macro AUC | 0.944 | 0.731 | −0.213 |
+| Melanoma sensitivity | 0.419 | 0.258 | −0.162 |
+
+**The bottleneck largely fails, and the failure is specific.** Balanced accuracy 0.207 with AKIEC recall 0.000, BKL 0.042, VASC 0.046: it predicts NV for almost everything. Its 0.637 accuracy is *below* the always-predict-NV baseline of 0.669 — an accuracy figure that means nothing on its own.
+
+Four diagnosed causes, in order of how much I think each matters:
+
+**1. The concept set is incomplete for this label set.** Pigment network, streaks and globules are the diagnostic vocabulary of *melanocytic* lesions — nevi and melanoma. BCC is diagnosed on arborising vessels, AKIEC on a strawberry pattern, VASC on vascular lacunae. **None of those is expressible in these five attributes**, so for those classes the bottleneck contains no relevant information at all. This is a property of the concept set, not a failure of the method: the near-parity Koh et al. report for CBMs assumes concepts sufficient for the task.
+
+**2. 20 dimensions vs 1280.** The black box classifies on EfficientNet's 1280-d feature vector; the bottleneck compresses the same image into 20 numbers by construction. Some loss is the entire point, but this is a hard ceiling.
+
+**3. Moderate concept fidelity compounds.** κ 0.19–0.49 concepts feed a linear model, and the errors stack.
+
+**4. The signal concentrates in two attributes.** Zeroing a whole attribute and re-predicting (a sensitivity analysis — Task 3 images have no attribute ground truth, so this is *not* Koh-style ground-truth correction) changes: pigment network **13.7%** of predictions, globules 9.9%, milia-like cysts 3.3%, negative network 2.9%, streaks **1.7%**.
+
+### Leverage × fidelity — which dimensions are load-bearing *and* unreliable
+
+![Leverage vs fidelity](assets/cbm-leverage-vs-fidelity.png)
+
+Cross-referencing what the classifier leans on against how well each dimension is actually predicted:
+
+| Concept dimension | Leverage | Fidelity |
+|---|---|---|
+| `pigment_network__area_frac` | **1.000** | 0.686 ✅ highest fidelity too |
+| `negative_network__area_frac` | 0.401 | **0.295** ⚠️ second pillar, weak |
+| `globules__area_frac` | 0.375 | 0.576 |
+| `pigment_network__n_blobs` | 0.253 | 0.499 |
+| `milia_like_cyst__present` | 0.218 | **0.187** ⚠️ lowest fidelity of all 20 |
+
+The most load-bearing dimension is also the best-predicted one, which is reassuring. But the second pillar has fidelity 0.295 — the model is partly reasoning from a quantity it measures poorly. **That combination is what produces explanations that sound plausible and rest on wrong evidence**, and it is invisible to any accuracy metric. Surfacing it is the concrete argument for building the bottleneck at all.
+
+### The honest verdict
+
+Interpretability was not free here — it cost half the balanced accuracy. But the diagnosis is actionable rather than mysterious:
+
+- **Extend the concept set** to cover non-melanocytic lesions (vascular patterns, arborising vessels, strawberry pattern). Without this, no amount of tuning helps BCC / AKIEC / VASC.
+- **Train Task 2 to convergence** — it was still improving at epoch 30 — to lift concept fidelity above κ ≈ 0.5.
+- **Consider a hybrid / residual CBM**: keep a side-channel from image features so accuracy is recoverable, accepting that the side-channel is exactly the part that cannot be explained.
+
+⚠️ Not clinically validated, not a medical device. The geometric qualifiers in particular (`asymmetry` and `n_blobs` as proxies for *atypical* / *irregular*) are load-bearing in the rationale text and have **not** been reviewed by a dermatologist.
 
 ---
 
